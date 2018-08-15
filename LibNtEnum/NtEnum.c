@@ -6,7 +6,37 @@
 
 #include "NtEnum.h"
 
-long myNtEnum(LPCWSTR NtObjDirname, USHORT byteDirnameLength, USHORT byteBufLength, DirBufferCallback dirBufCallback) // L"\\??\\c:\\temp"; 
+#define WINAPI				__stdcall
+typedef unsigned long       DWORD;
+#define DECLSPEC_ALLOCATOR __declspec(allocator)
+typedef void               *LPVOID;
+typedef int                 BOOL;
+
+//DECLSPEC_ALLOCATOR
+LPVOID
+WINAPI
+HeapAlloc(
+	_In_ HANDLE hHeap,
+	_In_ DWORD dwFlags,
+	_In_ SIZE_T dwBytes
+);
+
+BOOL
+WINAPI
+HeapFree(
+	_Inout_ HANDLE hHeap,
+	_In_ DWORD dwFlags,
+	__drv_freesMem(Mem) _Frees_ptr_opt_ LPVOID lpMem
+);
+
+HANDLE
+WINAPI
+GetProcessHeap(
+	VOID
+);
+
+long myNtEnum(LPCWSTR NtObjDirname, USHORT byteDirnameLength, USHORT byteBufLength, DirBufferCallback dirBufCallback
+	, PVOID bufferToUse, unsigned long bufferSize) 
 {
 	//RtlDosPathNameToNtPathName_U_WithStatus
 	NTSTATUS ntStat;
@@ -35,7 +65,6 @@ long myNtEnum(LPCWSTR NtObjDirname, USHORT byteDirnameLength, USHORT byteBufLeng
 			return ntStat;
 		}
 	}
-	__declspec(align(64)) FILE_DIRECTORY_INFORMATION	dirBuffer[128];
 
 	while ((ntStat = NtQueryDirectoryFile(
 		dirHandle
@@ -43,8 +72,8 @@ long myNtEnum(LPCWSTR NtObjDirname, USHORT byteDirnameLength, USHORT byteBufLeng
 		, NULL		// ApcRoutine
 		, NULL		// ApcContext
 		, &ioBlock
-		, dirBuffer
-		, sizeof(dirBuffer)
+		, bufferToUse
+		, bufferSize
 		, FileDirectoryInformation
 		, FALSE		// ReturnSingleEntry
 		, NULL		// FileName
@@ -52,7 +81,7 @@ long myNtEnum(LPCWSTR NtObjDirname, USHORT byteDirnameLength, USHORT byteBufLeng
 	)) == STATUS_SUCCESS)
 	{
 		//writeOut(L"E: rc: 0x%lX, API: NtQueryDirectoryFile\n", ntStat);
-		dirBufCallback(dirBuffer);
+		dirBufCallback(bufferToUse);
 	}
 
 	NtClose(dirHandle);

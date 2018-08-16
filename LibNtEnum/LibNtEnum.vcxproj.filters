@@ -18,6 +18,9 @@
     <ClCompile Include="NtEnum.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="NtEnumApc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">

@@ -36,22 +36,44 @@ typedef struct _myApcContext
 //
 //
 //
-MyApcContext* AllocContextStruct(LPCWSTR dirname, const USHORT byteLenNtObjDirname, HANDLE dirHandle)
+MyApcContext* AllocContextStruct(LPCWSTR dirname, const USHORT byteLenNtObjDirname, WCHAR* dirToAppendWithoutZero, USHORT byteLenDirToAppendWithoutZero)
 {
+	int byteLenFullDir =
+		byteLenNtObjDirname
+		+ sizeof(WCHAR)			// L"\"
+		+ byteLenDirToAppendWithoutZero
+		+ sizeof(WCHAR)			// L"\0"
+		;
+
 	MyApcContext* ctx = (MyApcContext*)
 		RtlAllocateHeap(
 			g_opts.hProcessHeap, 
 			0, 
 			  dirBufSize 
-			+ byteLenNtObjDirname + sizeof(WCHAR)
-			+ FIELD_OFFSET(MyApcContext, dirBuffer));
+			+ byteLenFullDir
+			+ FIELD_OFFSET(MyApcContext, NtObjDirname));
 
 	if (ctx != NULL)
 	{
 		ctx->ioBlock.Information = 0;
-		ctx->dirHandle = dirHandle;
 		ctx->byteLenNtObjDirname = byteLenNtObjDirname;
-		memcpy(ctx->NtObjDirname, dirname, byteLenNtObjDirname + sizeof(WCHAR)); // copy with terminating zero
+
+		WCHAR* w = ctx->NtObjDirname;
+		memcpy(w, dirname, byteLenNtObjDirname + sizeof(WCHAR)); // copy with terminating zero
+
+		if (byteLenDirToAppendWithoutZero > 0)
+		{
+			w += byteLenNtObjDirname;
+			if (*(w-1) != L'\\')
+			{
+				*w++ = L'\\';
+				ctx->byteLenNtObjDirname += sizeof(WCHAR);
+			}
+			memcpy(w, dirToAppendWithoutZero, byteLenDirToAppendWithoutZero);
+			w += byteLenDirToAppendWithoutZero;
+			*w = L'\0';
+			ctx->byteLenNtObjDirname += byteLenDirToAppendWithoutZero;
+		}
 	}
 
 	return ctx;
@@ -110,30 +132,33 @@ void NTAPI NtQueryDirectoryApcCallback(_In_ PVOID ApcContext, _In_ PIO_STATUS_BL
 int myNtEnumApcStart(
 	  LPCWSTR NtObjDirname
 	, USHORT byteDirnameLength
+	, WCHAR* dirToAppendWithoutZero
+	, USHORT byteLenDirToAppendWithoutZero
 	, long* ntstatus
 	, WCHAR** NtApinameError)
 {
 	NTSTATUS ntStat;
 
+	MyApcContext* ctx = AllocContextStruct(NtObjDirname, byteDirnameLength, dirToAppendWithoutZero, byteLenDirToAppendWithoutZero);
+	if (ctx == NULL)
+	{
+		*NtApinameError = L"RtlAllocateHeap";
+		*ntstatus = -1;
+		return FALSE;
+	}
+	
 	HANDLE dirHandle;
-	ntStat = myNtOpenFile(NtObjDirname, byteDirnameLength, &dirHandle);
+	ntStat = myNtOpenFile(ctx->NtObjDirname, ctx->byteLenNtObjDirname, &dirHandle);
 	if (!NT_SUCCESS(ntStat))
 	{
 		*NtApinameError = L"NtOpenFile";
 		*ntstatus = ntStat;
 		return FALSE;
 	}
-
-	MyApcContext* ctx = AllocContextStruct(NtObjDirname, byteDirnameLength, dirHandle );
-	if (ctx == NULL)
-	{
-		*NtApinameError = L"RtlAllocateHeap";
-		*ntstatus = ntStat;
-		return FALSE;
-	}
+	ctx->dirHandle = dirHandle;
 
 	ntStat = NtQueryDirectoryFile(
-		dirHandle
+		ctx->dirHandle
 		, NULL								// event
 		, NtQueryDirectoryApcCallback		// ApcRoutine
 		, ctx								// ApcContext
@@ -152,6 +177,7 @@ int myNtEnumApcStart(
 	}	
 	else
 	{
+		RtlFreeHeap(g_opts.hProcessHeap, 0, ctx);
 		*NtApinameError = L"NtQueryDirectoryFile(firstCall)";
 		*ntstatus = ntStat;
 		return FALSE;
@@ -168,7 +194,7 @@ void myNtEnumApcInit(pfDirBufferApc userCallback, HANDLE hProcessHeap)
 	g_opts.hProcessHeap = hProcessHeap;
 }
 
-void myNtEnumReportApcCounter(long* fired, long* completed)
+void myNtEnumApcReportCounter(long* fired, long* completed)
 {
 	*fired = g_ApcCounter.Fired;
 	*completed = g_ApcCounter.Completed;

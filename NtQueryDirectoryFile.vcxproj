@@ -73,7 +73,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>c:\Program Files (x86)\Windows Kits\10\Include\wdf\umdf\2.25;c:\Program Files (x86)\Windows Kits\10\Include\10.0.17134.0\km;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration)\;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)$(Configuration)\;$(LibraryPath)</LibraryPath>
     <TargetName>NtFind</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -85,7 +85,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>c:\Program Files (x86)\Windows Kits\10\Include\wdf\umdf\2.25;c:\Program Files (x86)\Windows Kits\10\Include\10.0.17134.0\km;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration)\;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)$(Configuration)\;$(LibraryPath)</LibraryPath>
     <TargetName>NtFind</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -193,14 +193,14 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
+    <ClCompile Include="main.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="PrintDirBufferEntries.cpp" />
-    <ClCompile Include="RunEnumApc.cpp" />
-    <ClCompile Include="RunEnumSeq.cpp" />
-    <ClCompile Include="WriteOut.cpp" />
+    <ClCompile Include="PrintDirBufferEntries.c" />
+    <ClCompile Include="RunEnumApc.c" />
+    <ClCompile Include="RunEnumSeq.c" />
+    <ClCompile Include="WriteOut.c" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="LibNtEnum\LibNtEnum.vcxproj">

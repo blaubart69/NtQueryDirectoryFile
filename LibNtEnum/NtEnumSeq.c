@@ -8,7 +8,7 @@
 
 NTSTATUS myNtOpenFile(LPCWSTR NtObjDirname, USHORT byteDirnameLength, PHANDLE dirHandle);
 
-long myNtEnum(LPCWSTR NtObjDirname, USHORT byteDirnameLength, pfDirBufferCallback dirBufCallback
+long myNtEnumSeq(LPCWSTR NtObjDirname, USHORT byteDirnameLength, pfDirBufferCallback dirBufCallback
 	, PVOID bufferToUse, unsigned long bufferSize, WCHAR** NtApinameError) 
 {
 	*NtApinameError = NULL;

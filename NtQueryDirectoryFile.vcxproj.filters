@@ -23,19 +23,19 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="RunEnumApc.cpp">
+    <ClCompile Include="main.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="RunEnumSeq.cpp">
+    <ClCompile Include="PrintDirBufferEntries.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PrintDirBufferEntries.cpp">
+    <ClCompile Include="RunEnumApc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="WriteOut.cpp">
+    <ClCompile Include="RunEnumSeq.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="main.cpp">
+    <ClCompile Include="WriteOut.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -11,7 +11,7 @@ BOOL RunEnumSeq(LPCWSTR NtObjDirname, int NtObjDirnameLen)
 	long bufferSize = 8192;
 	LPVOID dirBuffer = HeapAlloc(GetProcessHeap(), 0, bufferSize);
 
-	long ntStatus = myNtEnum(
+	long ntStatus = myNtEnumSeq(
 		NtObjDirname
 		, NtObjDirnameLen * sizeof(WCHAR)
 		, printFileEntries

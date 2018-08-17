@@ -19,17 +19,20 @@ extern "C" {
 	} SPI_FILE_DIRECTORY_INFORMATION, *PSPI_FILE_DIRECTORY_INFORMATION;
 
 	typedef void(*pfDirBufferCallback)(SPI_FILE_DIRECTORY_INFORMATION* FileInfoBuffer);
-	typedef void(*pfDirBufferApc)     (SPI_FILE_DIRECTORY_INFORMATION* FileInfoBuffer, int success, long ntStatus, WCHAR* NtApinameError);
+	typedef void(*pfDirBufferApc)     (LPCWSTR NtObjDirname, USHORT byteDirnameLength, SPI_FILE_DIRECTORY_INFORMATION* FileInfoBuffer, int success, long ntStatus, WCHAR* NtApinameError);
 
 	long myNtEnum(LPCWSTR NtObjDirname, USHORT byteDirnameLength, pfDirBufferCallback dirBufCallback
 		, PVOID bufferToUse, unsigned long bufferSize, WCHAR** NtApinameError);
 
-	int
-		myNtEnumApcStart(LPCWSTR NtObjDirname, USHORT byteDirnameLength
-			, pfDirBufferApc dirBufCallback
-			, HANDLE hProcessHeap
-			, long* ntstatus
-			, WCHAR** NtApinameError);
+	int myNtEnumApcStart(
+		LPCWSTR NtObjDirname
+		, USHORT byteDirnameLength
+		, pfDirBufferApc dirBufCallback
+		, HANDLE hProcessHeap
+		, long* ApcFired
+		, long* ApcCompleted
+		, long* ntstatus
+		, WCHAR** NtApinameError);
 
 #ifdef __cplusplus
 }

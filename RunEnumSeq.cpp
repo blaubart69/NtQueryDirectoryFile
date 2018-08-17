@@ -24,7 +24,7 @@ BOOL RunEnumSeq(LPCWSTR NtObjDirname, int NtObjDirnameLen)
 	BOOL rc;
 	if (ntStatus != 0)
 	{
-		writeOut(L"E: NTSTATUS: 0x%lX, function: RunEnumSeq, NTApiname: %s", ntStatus, NtApinameError);
+		WriteNtError(ntStatus, NtApinameError, L"RunEnumSeq");
 		rc = FALSE;
 	}
 	else

@@ -14,3 +14,11 @@ BOOL writeOut(const WCHAR * format, ...)
 	DWORD written;
 	return WriteConsoleW(GetStdHandle(STD_OUTPUT_HANDLE), buf, writtenChars, &written, NULL);
 }
+
+void WriteNtError(long ntStatus, LPCWSTR NtApinameError, LPCWSTR Functionname)
+{
+	writeOut(L"E: NTSTATUS: 0x%lX, NTApiname: %s, function: %s\n", 
+		ntStatus, 
+		NtApinameError,
+		Functionname);
+}

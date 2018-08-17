@@ -4,15 +4,7 @@
 #include "LibNtEnum/NtEnum.h"
 #include "NtQuery.h"
 
-typedef struct _stats
-{
-	long apcFired;
-	long apcCompleted;
-} Stats;
-
-Stats gStats;
-
-void myApcCallback(LPCWSTR NtObjDirname, USHORT byteDirnameLength, SPI_FILE_DIRECTORY_INFORMATION* dirBuffer, int success, long ntStatus, WCHAR* NtApinameError)
+void OnDirectoryBuffer(LPCWSTR NtObjDirname, USHORT byteDirnameLength, SPI_FILE_DIRECTORY_INFORMATION* dirBuffer, int success, long ntStatus, WCHAR* NtApinameError)
 {
 	if (!success)
 	{
@@ -42,34 +34,33 @@ BOOL RunEnumApc(LPCWSTR NtObjDirname, int NtObjDirnameLen)
 	long ntstat;
 	WCHAR *NtApinameError;
 
-	gStats = { 0 };
+	myNtEnumApcInit(OnDirectoryBuffer, GetProcessHeap());
 
 	BOOL ok = myNtEnumApcStart(
 		NtObjDirname
 		, NtObjDirnameLen * sizeof(WCHAR)
-		, myApcCallback
-		, GetProcessHeap()
-		, &gStats.apcFired
-		, &gStats.apcCompleted
 		, &ntstat
 		, &NtApinameError);
 
 	if (!ok)
 	{
 		WriteNtError(ntstat, NtApinameError, L"myNtEnumApcStart");
+		return FALSE;
 	}
 
 	while (true)
 	{
 		DWORD reason = SleepEx(1000, TRUE);
 
+		long fired, completed;
+		myNtEnumReportApcCounter(&fired, &completed);
+
 		if (reason == 0) // "The return value is zero if the specified time interval expired."
 		{
 			writeOut(L"APCs fired/completed\t%ld/%ld\n",
-				gStats.apcFired,
-				gStats.apcCompleted);
+				fired, completed);
 		}
-		if (gStats.apcFired == gStats.apcCompleted)
+		if (fired == completed)
 		{
 			break;
 		}

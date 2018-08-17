@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="NtEnum.c" />
+    <ClCompile Include="NtEnumSeq.c" />
     <ClCompile Include="NtEnumApc.c" />
   </ItemGroup>
   <ItemGroup>

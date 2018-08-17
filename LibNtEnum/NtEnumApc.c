@@ -3,19 +3,6 @@
 
 #include "NtEnum.h"
 
-/*
-#define WINAPI      __stdcall
-typedef unsigned long       DWORD;
-
-void*
-WINAPI
-HeapAlloc(
-	_In_ HANDLE hHeap,
-	_In_ DWORD dwFlags,
-	_In_ SIZE_T dwBytes
-);
-*/
-
 NTSTATUS myNtOpenFile(LPCWSTR NtObjDirname, USHORT byteDirnameLength, PHANDLE dirHandle);
 
 const SIZE_T dirBufSize = 4096;
@@ -60,25 +47,28 @@ MyApcContext* AllocContextStruct(LPCWSTR dirname, const USHORT byteLenNtObjDirna
 
 	return ctx;
 }
-void NTAPI myApcRoutine(_In_ PVOID ApcContext, _In_ PIO_STATUS_BLOCK IoStatusBlock, _In_ ULONG Reserved)
+void NTAPI NtQueryDirectoryApcCallback(_In_ PVOID ApcContext, _In_ PIO_STATUS_BLOCK IoStatusBlock, _In_ ULONG Reserved)
 {
 	MyApcContext *ctx = (MyApcContext*)ApcContext;
+	BOOLEAN ApcSubmittedOk = FALSE;
 
-	if (NT_SUCCESS(IoStatusBlock->Status))
+	if (!NT_SUCCESS(IoStatusBlock->Status))
 	{
-		if (IoStatusBlock->Information == 0)
+		if (IoStatusBlock->Status != STATUS_NO_MORE_FILES)
 		{
-			//ntStat = STATUS_NO_MORE_FILES;
-			RtlFreeHeap(g_ProcessHeap, 0, ApcContext);
+			g_userCallback(ctx->NtObjDirname, ctx->byteLenNtObjDirname, ctx->dirBuffer, FALSE, IoStatusBlock->Status, L"NtQueryDirectoryFile(APC)");
 		}
-		else
+	}
+	else
+	{
+		if (IoStatusBlock->Information != 0)
 		{
 			g_userCallback(ctx->NtObjDirname, ctx->byteLenNtObjDirname, ctx->dirBuffer, TRUE, IoStatusBlock->Status, NULL);
 
 			NTSTATUS ntStat = NtQueryDirectoryFile(
 				ctx->dirHandle
 				, NULL				// event
-				, myApcRoutine		// ApcRoutine
+				, NtQueryDirectoryApcCallback		// ApcRoutine
 				, ctx				// ApcContext
 				, &(ctx->ioBlock)
 				, ctx->dirBuffer
@@ -91,17 +81,17 @@ void NTAPI myApcRoutine(_In_ PVOID ApcContext, _In_ PIO_STATUS_BLOCK IoStatusBlo
 			if (NT_SUCCESS(ntStat))
 			{
 				*g_ApcFired += 1;
+				ApcSubmittedOk = TRUE;
 			}
 			else
 			{
 				g_userCallback(ctx->NtObjDirname, ctx->byteLenNtObjDirname, ctx->dirBuffer, FALSE, ntStat, L"NtQueryDirectoryFile(APC)");
-				RtlFreeHeap(g_ProcessHeap, 0, ApcContext);
 			}
 		}
 	}
-	else
+
+	if (!ApcSubmittedOk)
 	{
-		g_userCallback(ctx->NtObjDirname, ctx->byteLenNtObjDirname, ctx->dirBuffer, FALSE, IoStatusBlock->Status, L"NtQueryDirectoryFile(APC)");
 		RtlFreeHeap(g_ProcessHeap, 0, ApcContext);
 	}
 
@@ -145,24 +135,19 @@ int myNtEnumApcStart(
 		*ntstatus = ntStat;
 		return FALSE;
 	}
-	//
-	//
-	//
-	ctx->ioBlock.Information = 0;
-	ctx->dirHandle = dirHandle;
 
 	ntStat = NtQueryDirectoryFile(
 		dirHandle
-		, NULL				// event
-		, myApcRoutine		// ApcRoutine
-		, ctx				// ApcContext
+		, NULL								// event
+		, NtQueryDirectoryApcCallback		// ApcRoutine
+		, ctx								// ApcContext
 		, &(ctx->ioBlock)
 		, ctx->dirBuffer
 		, dirBufSize
 		, FileDirectoryInformation
-		, FALSE				// ReturnSingleEntry
-		, NULL				// FileName
-		, FALSE				// RestartScan
+		, FALSE								// ReturnSingleEntry
+		, NULL								// FileName
+		, FALSE								// RestartScan
 	);
 
 	if (NT_SUCCESS(ntStat))

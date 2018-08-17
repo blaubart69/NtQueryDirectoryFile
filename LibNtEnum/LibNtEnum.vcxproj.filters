@@ -15,10 +15,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="NtEnum.c">
+    <ClCompile Include="NtEnumApc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="NtEnumApc.c">
+    <ClCompile Include="NtEnumSeq.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

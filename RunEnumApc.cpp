@@ -69,12 +69,9 @@ BOOL RunEnumApc(LPCWSTR NtObjDirname, int NtObjDirnameLen)
 				gStats.apcFired,
 				gStats.apcCompleted);
 		}
-		else 
+		if (gStats.apcFired == gStats.apcCompleted)
 		{
-			if (gStats.apcFired == gStats.apcCompleted)
-			{
-				break;
-			}
+			break;
 		}
 	}
 

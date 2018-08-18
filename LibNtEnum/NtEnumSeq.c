@@ -73,26 +73,3 @@ long myNtEnumSeq(LPCWSTR NtObjDirname, USHORT byteDirnameLength, pfDirBufferCall
 	}
 }
 
-NTSTATUS myNtOpenFile(LPCWSTR NtObjDirname, USHORT byteDirnameLength, PHANDLE dirHandle)
-{
-	NTSTATUS ntStat;
-	IO_STATUS_BLOCK ioBlock;
-
-	UNICODE_STRING dirname;
-	dirname.Buffer			= NtObjDirname;
-	dirname.Length			= byteDirnameLength;
-	dirname.MaximumLength	= byteDirnameLength + 2;
-
-	OBJECT_ATTRIBUTES objAttr;
-	InitializeObjectAttributes(&objAttr, &dirname, OBJ_INHERIT, NULL, NULL);
-
-	ntStat = NtOpenFile(
-		dirHandle
-		, GENERIC_READ
-		, (POBJECT_ATTRIBUTES)&objAttr
-		, &ioBlock
-		, FILE_SHARE_READ
-		, FILE_DIRECTORY_FILE);
-
-	return ntStat;
-}

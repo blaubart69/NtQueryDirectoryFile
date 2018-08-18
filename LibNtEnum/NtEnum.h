@@ -34,6 +34,8 @@ extern "C" {
 		, long* ntstatus
 		, WCHAR** NtApinameError);
 
+	int myCreateFile(LPCWSTR lpFilename, PHANDLE dirHandle);
+
 #ifdef __cplusplus
 }
 #endif

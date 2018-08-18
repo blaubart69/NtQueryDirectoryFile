@@ -21,10 +21,12 @@
   <ItemGroup>
     <ClCompile Include="NtEnumSeq.c" />
     <ClCompile Include="NtEnumApc.c" />
+    <ClCompile Include="OpenFile.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="NtEnum.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="Win32.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

@@ -21,12 +21,18 @@
     <ClCompile Include="NtEnumSeq.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="OpenFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="NtEnum.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Win32.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

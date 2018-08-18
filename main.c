@@ -19,7 +19,7 @@ void rawmain(void)
 	else
 	{
 		WCHAR dirname[1024];
-		int len = wsprintfW(dirname, L"\\??\\%s", args[1]);
+		int len = wsprintfW(dirname, L"\\\\?\\%s", args[1]);
 		rc = RunEnumApc(dirname, len) ? 0 : 8;
 		//rc = RunEnumSeq(dirname, len) ? 0 : 8;
 	}

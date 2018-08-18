@@ -31,7 +31,6 @@ void OnDirectoryBuffer(LPCWSTR NtObjDirname, USHORT byteDirnameLength, SPI_FILE_
 		{
 			if (isDirectory(dirBuffer->FileAttributes))
 			{
-				/*
 				long ntStatus;
 				WCHAR *NtApinameError;
 				if (!myNtEnumApcStart(
@@ -44,7 +43,6 @@ void OnDirectoryBuffer(LPCWSTR NtObjDirname, USHORT byteDirnameLength, SPI_FILE_
 				{
 					WriteNtError(ntStatus, NtApinameError, L"OnDirectoryBuffer");
 				}
-				*/
 			}
 			OnEntry(NtObjDirname, byteDirnameLength, dirBuffer);
 		}

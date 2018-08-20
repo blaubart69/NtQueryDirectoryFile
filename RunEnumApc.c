@@ -17,7 +17,7 @@ void OnEntry(LPCWSTR NtObjDirname, USHORT byteDirnameLength, SPI_FILE_DIRECTORY_
 	WriteConsoleW(GetStdHandle(STD_OUTPUT_HANDLE), L"\n", 1, &written, NULL);
 }
 
-void OnDirectoryBuffer(LPCWSTR NtObjDirname, USHORT byteDirnameLength, SPI_FILE_DIRECTORY_INFORMATION* dirBuffer, int success, long ntStatus, WCHAR* NtApinameError)
+void OnDirectoryBuffer(LPCWSTR NtObjDirname, const USHORT byteDirnameLength, const SPI_FILE_DIRECTORY_INFORMATION* dirBuffer, const int success, const long ntStatus, const WCHAR* NtApinameError)
 {
 	if (!success)
 	{

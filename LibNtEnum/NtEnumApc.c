@@ -39,7 +39,7 @@ typedef struct _myApcContext
 //
 //
 //
-MyApcContext* AllocContextStruct(LPCWSTR dirname, const USHORT byteLenNtObjDirname, WCHAR* dirToAppendWithoutZero, USHORT byteLenDirToAppendWithoutZero)
+MyApcContext* AllocContextStruct(LPCWSTR dirname, const USHORT byteLenNtObjDirname, const WCHAR* dirToAppendWithoutZero, const USHORT byteLenDirToAppendWithoutZero)
 {
 	int byteLenFullDir =
 		byteLenNtObjDirname
@@ -48,7 +48,7 @@ MyApcContext* AllocContextStruct(LPCWSTR dirname, const USHORT byteLenNtObjDirna
 		+ sizeof(WCHAR)			// L"\0"
 		;
 
-	MyApcContext* ctx = (MyApcContext*)
+	MyApcContext* newCtx = (MyApcContext*)
 		RtlAllocateHeap(
 			g_opts.hProcessHeap, 
 			0, 
@@ -56,14 +56,14 @@ MyApcContext* AllocContextStruct(LPCWSTR dirname, const USHORT byteLenNtObjDirna
 			+ byteLenFullDir
 			+ FIELD_OFFSET(MyApcContext, NtObjDirname));
 
-	if (ctx != NULL)
+	if (newCtx != NULL)
 	{
-		ctx->ioBlock.Information = 0;
-		ctx->byteLenNtObjDirname = byteLenNtObjDirname;
+		newCtx->ioBlock.Information = 0;
+		newCtx->byteLenNtObjDirname = byteLenNtObjDirname;
 		//ctx->myNTSTATUS = 0;
 
-		WCHAR* w = ctx->NtObjDirname;
-		memcpy(w, dirname, byteLenNtObjDirname + sizeof(WCHAR)); // copy with terminating zero
+		WCHAR* w = newCtx->NtObjDirname;
+		RtlMoveMemory(w, dirname, byteLenNtObjDirname + sizeof(WCHAR)); // copy with terminating zero
 
 		if (byteLenDirToAppendWithoutZero > 0)
 		{
@@ -71,27 +71,28 @@ MyApcContext* AllocContextStruct(LPCWSTR dirname, const USHORT byteLenNtObjDirna
 			if (*(w-1) != L'\\')
 			{
 				*w++ = L'\\';
-				ctx->byteLenNtObjDirname += sizeof(WCHAR);
+				newCtx->byteLenNtObjDirname += sizeof(WCHAR);
 			}
-			memcpy(w, dirToAppendWithoutZero, byteLenDirToAppendWithoutZero);
+			RtlMoveMemory(w, dirToAppendWithoutZero, byteLenDirToAppendWithoutZero);
 			(char)w += byteLenDirToAppendWithoutZero;
 			*w = L'\0';
-			ctx->byteLenNtObjDirname += byteLenDirToAppendWithoutZero;
+			newCtx->byteLenNtObjDirname += byteLenDirToAppendWithoutZero;
 		}
 	}
 
-	return ctx;
+	return newCtx;
 }
 
 int writeOut(const WCHAR * format, ...);
 
 void NTAPI NtQueryDirectoryApcCallback(_In_ PVOID ApcContext, _In_ PIO_STATUS_BLOCK IoStatusBlock, _In_ ULONG Reserved)
 {
-	writeOut(L"NtQueryDirectoryApcCallback: >>> enter - fired %ld, completed %ld, NtStatus 0x%lX, IO.Information %lu\n", 
-		g_ApcCounter.Fired, g_ApcCounter.Completed,
-		IoStatusBlock->Status, IoStatusBlock->Information);
-
 	MyApcContext *ctx = (MyApcContext*)ApcContext;
+
+	writeOut(L"   Apc_CallB: >>> enter - fired/completed/NtStatus/Info %5ld/%5ld/0x%08lX/%8lu | %s\n",
+		g_ApcCounter.Fired, g_ApcCounter.Completed,
+		IoStatusBlock->Status, IoStatusBlock->Information,
+		ctx->NtObjDirname);
 
 	if (!NT_SUCCESS(IoStatusBlock->Status))
 	{
@@ -99,11 +100,11 @@ void NTAPI NtQueryDirectoryApcCallback(_In_ PVOID ApcContext, _In_ PIO_STATUS_BL
 		{
 			NtClose(ctx->dirHandle);
 			RtlFreeHeap(g_opts.hProcessHeap, 0, ApcContext);
-			writeOut(L"NtQueryDirectoryApcCallback: STATUS_NO_MORE_FILES. NtClose(dirHandle); RtlFreeHeap();\n");
+			writeOut(L"      Apc_CallB: STATUS_NO_MORE_FILES. NtClose(dirHandle); RtlFreeHeap();\n");
 		}
 		else
 		{
-			writeOut(L"NtQueryDirectoryApcCallback: !SUCCESS->!NO_MORE_FILES Information=%lu\n", IoStatusBlock->Information);
+			writeOut(L"      Apc_CallB: !SUCCESS->!NO_MORE_FILES Information=%lu\n", IoStatusBlock->Information);
 			g_opts.dirBufCallback(ctx->NtObjDirname, ctx->byteLenNtObjDirname, ctx->dirBuffer, FALSE, IoStatusBlock->Status, L"NtQueryDirectoryFile(callback != STATUS_NO_MORE_FILES)");
 		}
 	}
@@ -128,18 +129,18 @@ void NTAPI NtQueryDirectoryApcCallback(_In_ PVOID ApcContext, _In_ PIO_STATUS_BL
 			);
 			g_ApcCounter.Fired += 1;
 
-			writeOut(L"NtQueryDirectoryFile: fired because more data to come. NTSTATUS 0x%lX, IoStatus.Information %lu\n", ntStat, ctx->ioBlock.Information);
+			writeOut(L"      Apc_CallB: called NTSTATUS 0x%lX, IoStatus.Information %lu\n", ntStat, ctx->ioBlock.Information);
 
 			if (NT_SUCCESS(ntStat))
 			{
-				writeOut(L"NtQueryDirectoryFile: internal NtQueryDirectoryFile SUCCESS\n");
+				//writeOut(L"NtQueryDirectoryFile: internal NtQueryDirectoryFile SUCCESS\n");
 			}
 			else
 			{
 				if (ntStat == STATUS_NO_MORE_FILES)
 				{
 					//ctx->myNTSTATUS = STATUS_NO_MORE_FILES;
-					writeOut(L"NtQueryDirectoryFile: settings myNTSTATUS to no_more_files\n");
+					//writeOut(L"NtQueryDirectoryFile: settings myNTSTATUS to no_more_files\n");
 				}
 				else
 				{
@@ -150,14 +151,17 @@ void NTAPI NtQueryDirectoryApcCallback(_In_ PVOID ApcContext, _In_ PIO_STATUS_BL
 	}
 
 	g_ApcCounter.Completed += 1;
-	writeOut(L"NtQueryDirectoryApcCallback: <<< leave - fired %ld, completed %ld\n", g_ApcCounter.Fired, g_ApcCounter.Completed);
+	writeOut(L"   Apc_CallB: <<< leave - fired/completed/NtStatus/Info %5ld/%5ld/0x%08lX/%8lu | %s\n",
+		g_ApcCounter.Fired, g_ApcCounter.Completed,
+		IoStatusBlock->Status, IoStatusBlock->Information,
+		ctx->NtObjDirname);
 }
 
 int myNtEnumApcStart(
 	  LPCWSTR NtObjDirname
-	, USHORT byteDirnameLength
-	, WCHAR* dirToAppendWithoutZero
-	, USHORT byteLenDirToAppendWithoutZero
+	, const USHORT byteDirnameLength
+	, const WCHAR* dirToAppendWithoutZero
+	, const USHORT byteLenDirToAppendWithoutZero
 	, long* ntstatus
 	, WCHAR** NtApinameError)
 {
@@ -171,6 +175,10 @@ int myNtEnumApcStart(
 		return FALSE;
 	}
 	
+	writeOut(L"Apc_Start: parent/bytes: [%s]/%d, dir/bytes: [%s]/%d, new/bytes: [%s]/%d\n",
+		NtObjDirname, byteDirnameLength, dirToAppendWithoutZero, byteLenDirToAppendWithoutZero,
+		ctx->NtObjDirname, ctx->byteLenNtObjDirname);
+
 	HANDLE dirHandle;
 	//ntStat = myNtOpenFile(ctx->NtObjDirname, ctx->byteLenNtObjDirname, &dirHandle);
 	int ok = myCreateFile(ctx->NtObjDirname, &dirHandle);
@@ -178,10 +186,8 @@ int myNtEnumApcStart(
 	{
 		*NtApinameError = L"CreateFile";
 		*ntstatus = -1;
+		writeOut(L"E: CreateFile failed. [%s]\n", ctx->NtObjDirname);
 		return FALSE;
-	}
-	{
-		writeOut(L"CreateFile ok\n");
 	}
 	ctx->dirHandle = dirHandle;
 
@@ -198,11 +204,12 @@ int myNtEnumApcStart(
 		, NULL								// FileName
 		, TRUE								// RestartScan
 	);
+	g_ApcCounter.Fired += 1;
 
 	if (NT_SUCCESS(ntStat))
 	{
-		g_ApcCounter.Fired += 1;
-		writeOut(L"ApcStart: NtStatus 0x%lX, Io.Info %lu\n", ntStat, ctx->ioBlock.Information);
+		writeOut(L"Apc_Start: NtStatus 0x%lX, Io.Info %lu, addrCtx 0x%lX, byteLenDirToAppend %d, [%s]\n", 
+			ntStat, ctx->ioBlock.Information, *ctx, byteLenDirToAppendWithoutZero, ctx->NtObjDirname);
 	}	
 	else
 	{

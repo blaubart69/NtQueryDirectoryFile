@@ -19,7 +19,7 @@ extern "C" {
 	} SPI_FILE_DIRECTORY_INFORMATION, *PSPI_FILE_DIRECTORY_INFORMATION;
 
 	typedef void(*pfDirBufferCallback)(SPI_FILE_DIRECTORY_INFORMATION* FileInfoBuffer);
-	typedef void(*pfDirBufferApc)     (LPCWSTR NtObjDirname, USHORT byteDirnameLength, SPI_FILE_DIRECTORY_INFORMATION* FileInfoBuffer, int success, long ntStatus, WCHAR* NtApinameError);
+	typedef void(*pfDirBufferApc)     (LPCWSTR NtObjDirname, const USHORT byteDirnameLength, const SPI_FILE_DIRECTORY_INFORMATION* FileInfoBuffer, const int success, const long ntStatus, const WCHAR* NtApinameError);
 
 	long myNtEnumSeq(LPCWSTR NtObjDirname, USHORT byteDirnameLength, pfDirBufferCallback dirBufCallback
 		, PVOID bufferToUse, unsigned long bufferSize, WCHAR** NtApinameError);
@@ -28,9 +28,9 @@ extern "C" {
 	void myNtEnumApcReportCounter(long* fired, long* completed);
 	int myNtEnumApcStart(
 		LPCWSTR NtObjDirname
-		, USHORT byteDirnameLength
-		, WCHAR* dirToAppendWithoutZero
-		, USHORT byteLenDirToAppendWithoutZero
+		, const USHORT byteDirnameLength
+		, const WCHAR* dirToAppendWithoutZero
+		, const USHORT byteLenDirToAppendWithoutZero
 		, long* ntstatus
 		, WCHAR** NtApinameError);
 

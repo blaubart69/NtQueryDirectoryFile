@@ -19,7 +19,7 @@ extern "C" {
 	} SPI_FILE_DIRECTORY_INFORMATION, *PSPI_FILE_DIRECTORY_INFORMATION;
 
 	typedef void(*pfDirBufferCallback)(SPI_FILE_DIRECTORY_INFORMATION* FileInfoBuffer);
-	typedef void(*pfDirBufferApc)     (LPCWSTR NtObjDirname, const USHORT byteDirnameLength, const SPI_FILE_DIRECTORY_INFORMATION* FileInfoBuffer, const int success, const long ntStatus, const WCHAR* NtApinameError);
+	typedef void(*pfDirBufferApc)     (LPCWSTR NtObjDirname, const USHORT byteDirnameLength, const FILE_DIRECTORY_INFORMATION* FileInfoBuffer, const int success, const long ntStatus, const WCHAR* NtApinameError);
 
 	long myNtEnumSeq(LPCWSTR NtObjDirname, USHORT byteDirnameLength, pfDirBufferCallback dirBufCallback
 		, PVOID bufferToUse, unsigned long bufferSize, WCHAR** NtApinameError);

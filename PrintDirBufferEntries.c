@@ -1,10 +1,7 @@
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-
-#include "LibNtEnum/NtEnum.h"
+#include "stdafx.h"
 
 //-------------------------------------------------------------------------------------------------
-BOOL IsDotDir(LPCWSTR cFileName, const DWORD cFilenameLenBytes, DWORD dwFileAttributes) {
+BOOL IsDotDir(LPCWSTR cFileName, const DWORD cFilenameLenBytes, const DWORD dwFileAttributes) {
 	//-------------------------------------------------------------------------------------------------
 
 	if ((dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) return FALSE;
@@ -16,7 +13,7 @@ BOOL IsDotDir(LPCWSTR cFileName, const DWORD cFilenameLenBytes, DWORD dwFileAttr
 	return FALSE;
 }
 
-void printFileEntries(SPI_FILE_DIRECTORY_INFORMATION *dirBuffer)
+void printFileEntries(FILE_DIRECTORY_INFORMATION *dirBuffer)
 {
 	BOOL hasMore;
 	do
@@ -28,6 +25,6 @@ void printFileEntries(SPI_FILE_DIRECTORY_INFORMATION *dirBuffer)
 			WriteConsoleW(GetStdHandle(STD_OUTPUT_HANDLE), L"\n", 1, &written, NULL);
 		}
 		hasMore = dirBuffer->NextEntryOffset != 0;
-		dirBuffer = (SPI_FILE_DIRECTORY_INFORMATION*)((char*)dirBuffer + dirBuffer->NextEntryOffset);
+		dirBuffer = (FILE_DIRECTORY_INFORMATION*)((char*)dirBuffer + dirBuffer->NextEntryOffset);
 	} while (hasMore);
 }

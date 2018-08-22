@@ -17,7 +17,7 @@ BOOL writeOut(const WCHAR * format, ...)
 
 void WriteNtError(long ntStatus, LPCWSTR NtApinameError, LPCWSTR Functionname)
 {
-	writeOut(L"E: NTSTATUS: 0x%lX, NTApiname: %s, function: %s\n", 
+	writeOut(L"E: NTSTATUS: 0x%lX, NTApiname: %s, function: %S\n", 
 		ntStatus, 
 		NtApinameError,
 		Functionname);

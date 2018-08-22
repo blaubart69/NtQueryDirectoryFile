@@ -9,8 +9,8 @@ NTSTATUS myNtOpenFile(LPCWSTR NtObjDirname, USHORT byteDirnameLength, PHANDLE di
 
 typedef struct _ApcCounter
 {
-	DECLSPEC_ALIGN(64) long Fired;
-	DECLSPEC_ALIGN(64) long Completed;
+	DECLSPEC_ALIGN(8) long Fired;
+	DECLSPEC_ALIGN(8) long Completed;
 } ApcCounter;
 
 typedef struct _EnumApcOptions
@@ -22,19 +22,21 @@ typedef struct _EnumApcOptions
 ApcCounter		g_ApcCounter;
 EnumApcOptions	g_opts;
 
-const SIZE_T dirBufSize = 4096;
+//const SIZE_T dirBufSize = 4096;
 
 //
 // APC context
 //
 typedef struct _myApcContext
 {
-	DECLSPEC_ALIGN(64) IO_STATUS_BLOCK					ioBlock;
-	//DECLSPEC_ALIGN(64) NTSTATUS							myNTSTATUS;
-	DECLSPEC_ALIGN(64) HANDLE							dirHandle;
-	DECLSPEC_ALIGN(64) USHORT							byteLenNtObjDirname;
-	DECLSPEC_ALIGN(64) WCHAR							NtObjDirname[1];
-	DECLSPEC_ALIGN(64) SPI_FILE_DIRECTORY_INFORMATION	dirBuffer[1];
+	union {
+		SPI_FILE_DIRECTORY_INFORMATION	dirBuffer[1];
+		char buff[4096];
+	};
+	IO_STATUS_BLOCK					ioBlock;
+	HANDLE							dirHandle;
+	USHORT							byteLenNtObjDirname;
+	WCHAR							NtObjDirname[1];
 } MyApcContext;
 //
 //
@@ -52,31 +54,31 @@ MyApcContext* AllocContextStruct(LPCWSTR dirname, const USHORT byteLenNtObjDirna
 		RtlAllocateHeap(
 			g_opts.hProcessHeap, 
 			0, 
-			  dirBufSize 
-			+ byteLenFullDir
+			  byteLenFullDir
 			+ FIELD_OFFSET(MyApcContext, NtObjDirname));
 
 	if (newCtx != NULL)
 	{
 		newCtx->ioBlock.Information = 0;
 		newCtx->byteLenNtObjDirname = byteLenNtObjDirname;
-		//ctx->myNTSTATUS = 0;
 
 		WCHAR* w = newCtx->NtObjDirname;
 		RtlMoveMemory(w, dirname, byteLenNtObjDirname + sizeof(WCHAR)); // copy with terminating zero
 
 		if (byteLenDirToAppendWithoutZero > 0)
 		{
-			(char)w += byteLenNtObjDirname;
+			w += byteLenNtObjDirname / sizeof(WCHAR);
+			//(char*)w += byteLenNtObjDirname;
 			if (*(w-1) != L'\\')
 			{
 				*w++ = L'\\';
 				newCtx->byteLenNtObjDirname += sizeof(WCHAR);
 			}
 			RtlMoveMemory(w, dirToAppendWithoutZero, byteLenDirToAppendWithoutZero);
-			(char)w += byteLenDirToAppendWithoutZero;
+			w							  += byteLenDirToAppendWithoutZero / sizeof(WCHAR);
+			//(char*)w += byteLenDirToAppendWithoutZero;
 			*w = L'\0';
-			newCtx->byteLenNtObjDirname += byteLenDirToAppendWithoutZero;
+			newCtx->byteLenNtObjDirname	  += byteLenDirToAppendWithoutZero;
 		}
 	}
 
@@ -100,7 +102,7 @@ void NTAPI NtQueryDirectoryApcCallback(_In_ PVOID ApcContext, _In_ PIO_STATUS_BL
 		{
 			NtClose(ctx->dirHandle);
 			RtlFreeHeap(g_opts.hProcessHeap, 0, ApcContext);
-			writeOut(L"      Apc_CallB: STATUS_NO_MORE_FILES. NtClose(dirHandle); RtlFreeHeap();\n");
+			writeOut(L"      Apc_CallB: STATUS_NO_MORE_FILES. NtClose(dirHandle); RtlFreeHeap(0x%lX);\n", ApcContext);
 		}
 		else
 		{
@@ -121,7 +123,7 @@ void NTAPI NtQueryDirectoryApcCallback(_In_ PVOID ApcContext, _In_ PIO_STATUS_BL
 				, ctx				// ApcContext
 				, &(ctx->ioBlock)
 				, ctx->dirBuffer
-				, dirBufSize
+				, 4096
 				, FileDirectoryInformation
 				, FALSE				// ReturnSingleEntry
 				, NULL				// FileName
@@ -157,6 +159,21 @@ void NTAPI NtQueryDirectoryApcCallback(_In_ PVOID ApcContext, _In_ PIO_STATUS_BL
 		ctx->NtObjDirname);
 }
 
+void writeChars(LPCWSTR chars, const int lenChars)
+{
+	for (int i = 0; i < lenChars; i++)
+	{
+		writeOut(L"%C ", chars[i]);
+	}
+	writeOut(L"\n");
+
+	for (int i = 0; i < lenChars; i++)
+	{
+		writeOut(L"%02X", chars[i]);
+	}
+	writeOut(L"\n");
+}
+
 int myNtEnumApcStart(
 	  LPCWSTR NtObjDirname
 	, const USHORT byteDirnameLength
@@ -175,9 +192,13 @@ int myNtEnumApcStart(
 		return FALSE;
 	}
 	
+	long x = FIELD_OFFSET(MyApcContext, dirBuffer);
+
 	writeOut(L"Apc_Start: parent/bytes: [%s]/%d, dir/bytes: [%s]/%d, new/bytes: [%s]/%d\n",
 		NtObjDirname, byteDirnameLength, dirToAppendWithoutZero, byteLenDirToAppendWithoutZero,
 		ctx->NtObjDirname, ctx->byteLenNtObjDirname);
+
+	writeChars(ctx->NtObjDirname, ctx->byteLenNtObjDirname / 2);
 
 	HANDLE dirHandle;
 	//ntStat = myNtOpenFile(ctx->NtObjDirname, ctx->byteLenNtObjDirname, &dirHandle);
@@ -198,7 +219,7 @@ int myNtEnumApcStart(
 		, ctx								// ApcContext
 		, &(ctx->ioBlock)
 		, ctx->dirBuffer
-		, dirBufSize
+		, 4096
 		, FileDirectoryInformation
 		, FALSE								// ReturnSingleEntry
 		, NULL								// FileName
@@ -209,7 +230,7 @@ int myNtEnumApcStart(
 	if (NT_SUCCESS(ntStat))
 	{
 		writeOut(L"Apc_Start: NtStatus 0x%lX, Io.Info %lu, addrCtx 0x%lX, byteLenDirToAppend %d, [%s]\n", 
-			ntStat, ctx->ioBlock.Information, *ctx, byteLenDirToAppendWithoutZero, ctx->NtObjDirname);
+			ntStat, ctx->ioBlock.Information, ctx, byteLenDirToAppendWithoutZero, ctx->NtObjDirname);
 	}	
 	else
 	{

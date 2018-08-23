@@ -1,9 +1,4 @@
-﻿#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-#include <shellapi.h>
-
-#include "LibNtEnum/NtEnum.h"
-#include "NtQuery.h"
+﻿#include "stdafx.h"
 
 void rawmain(void)
 {

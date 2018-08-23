@@ -1,15 +1,11 @@
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-
-#include "LibNtEnum/NtEnum.h"
-#include "NtQuery.h"
+#include "stdafx.h"
 
 BOOL isDirectory(const DWORD dwFileAttributes)
 {
 	return (dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 }
 
-void OnEntry(LPCWSTR NtObjDirname, USHORT byteDirnameLength, SPI_FILE_DIRECTORY_INFORMATION* entry)
+void OnEntry(LPCWSTR NtObjDirname, const USHORT byteDirnameLength, const FILE_DIRECTORY_INFORMATION* entry)
 {
 	DWORD written;
 	writeOut(L"%s\\", NtObjDirname);
@@ -17,7 +13,7 @@ void OnEntry(LPCWSTR NtObjDirname, USHORT byteDirnameLength, SPI_FILE_DIRECTORY_
 	WriteConsoleW(GetStdHandle(STD_OUTPUT_HANDLE), L"\n", 1, &written, NULL);
 }
 
-void OnDirectoryBuffer(LPCWSTR NtObjDirname, const USHORT byteDirnameLength, const SPI_FILE_DIRECTORY_INFORMATION* dirBuffer, const int success, const long ntStatus, const WCHAR* NtApinameError)
+void OnDirectoryBuffer(LPCWSTR NtObjDirname, const USHORT byteDirnameLength, const FILE_DIRECTORY_INFORMATION* dirBuffer, const int success, const long ntStatus, const WCHAR* NtApinameError)
 {
 	if (!success)
 	{
@@ -48,11 +44,11 @@ void OnDirectoryBuffer(LPCWSTR NtObjDirname, const USHORT byteDirnameLength, con
 		}
 
 		hasMore = dirBuffer->NextEntryOffset != 0;
-		dirBuffer = (SPI_FILE_DIRECTORY_INFORMATION*)((char*)dirBuffer + dirBuffer->NextEntryOffset);
+		dirBuffer = (FILE_DIRECTORY_INFORMATION*)((char*)dirBuffer + dirBuffer->NextEntryOffset);
 	} while (hasMore);
 }
 
-BOOL RunEnumApc(LPCWSTR NtObjDirname, int NtObjDirnameLen)
+BOOL RunEnumApc(LPCWSTR dirname, int NtObjDirnameLen)
 {
 	long ntstat;
 	WCHAR *NtApinameError;
@@ -60,7 +56,7 @@ BOOL RunEnumApc(LPCWSTR NtObjDirname, int NtObjDirnameLen)
 	myNtEnumApcInit(OnDirectoryBuffer, GetProcessHeap());
 
 	BOOL ok = myNtEnumApcStart(
-		NtObjDirname
+		dirname
 		, NtObjDirnameLen * sizeof(WCHAR)
 		, NULL
 		, 0

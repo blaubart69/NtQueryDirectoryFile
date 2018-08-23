@@ -21,6 +21,12 @@
     <ClInclude Include="NtQuery.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="NtNative.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.c">
@@ -32,10 +38,13 @@
     <ClCompile Include="RunEnumApc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="RunEnumSeq.c">
+    <ClCompile Include="WriteOut.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="WriteOut.c">
+    <ClCompile Include="NtEnumApc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

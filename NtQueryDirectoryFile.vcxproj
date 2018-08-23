@@ -194,7 +194,6 @@
   <ItemGroup>
     <ClCompile Include="main.c" />
     <ClCompile Include="NtEnumApc.c" />
-    <ClCompile Include="PrintDirBufferEntries.c" />
     <ClCompile Include="RunEnumApc.c" />
     <ClCompile Include="stdafx.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

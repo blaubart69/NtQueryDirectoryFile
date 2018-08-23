@@ -32,9 +32,6 @@
     <ClCompile Include="main.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PrintDirBufferEntries.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="RunEnumApc.c">
       <Filter>Source Files</Filter>
     </ClCompile>

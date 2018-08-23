@@ -5,6 +5,19 @@ BOOL isDirectory(const DWORD dwFileAttributes)
 	return (dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 }
 
+//-------------------------------------------------------------------------------------------------
+BOOL IsDotDir(LPCWSTR cFileName, const DWORD cFilenameLenBytes, const DWORD dwFileAttributes) {
+	//-------------------------------------------------------------------------------------------------
+
+	if ((dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) return FALSE;
+	if (cFileName[0] != L'.') return FALSE;
+	if (cFilenameLenBytes == 2) return TRUE;
+	if (cFileName[1] != L'.') return FALSE;
+	if (cFilenameLenBytes == 4) return TRUE;
+
+	return FALSE;
+}
+
 void OnEntry(LPCWSTR NtObjDirname, const USHORT byteDirnameLength, const FILE_DIRECTORY_INFORMATION* entry)
 {
 	DWORD written;

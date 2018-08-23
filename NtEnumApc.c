@@ -29,7 +29,7 @@ typedef  struct _myApcContext
 	};
 	IO_STATUS_BLOCK					ioBlock;
 	HANDLE							dirHandle;
-	USHORT							byteLenNtObjDirname;
+	USHORT							cbDirname;
 	WCHAR							dirname[1];
 } MyApcContext;
 //
@@ -55,7 +55,7 @@ MyApcContext* AllocContextStruct(LPCWSTR dirname, const USHORT byteLenNtObjDirna
 	if (newCtx != NULL)
 	{
 		newCtx->ioBlock.Information = 0;
-		newCtx->byteLenNtObjDirname = byteLenNtObjDirname;
+		newCtx->cbDirname = byteLenNtObjDirname;
 
 		WCHAR* w = newCtx->dirname;
 		MoveMemory(w, dirname, byteLenNtObjDirname + sizeof(WCHAR)); // copy with terminating zero
@@ -67,13 +67,13 @@ MyApcContext* AllocContextStruct(LPCWSTR dirname, const USHORT byteLenNtObjDirna
 			if (*(w-1) != L'\\')
 			{
 				*w++ = L'\\';
-				newCtx->byteLenNtObjDirname += sizeof(WCHAR);
+				newCtx->cbDirname += sizeof(WCHAR);
 			}
 			MoveMemory(w, dirToAppendWithoutZero, byteLenDirToAppendWithoutZero);
 			w							  += byteLenDirToAppendWithoutZero / sizeof(WCHAR);
 			//(char*)w += byteLenDirToAppendWithoutZero;
 			*w = L'\0';
-			newCtx->byteLenNtObjDirname	  += byteLenDirToAppendWithoutZero;
+			newCtx->cbDirname	  += byteLenDirToAppendWithoutZero;
 		}
 	}
 
@@ -106,14 +106,14 @@ void NTAPI NtQueryDirectoryApcCallback(_In_ PVOID ApcContext, _In_ PIO_STATUS_BL
 #ifdef PRINT_DEBUG
 			writeOut(L"      Apc_CallB: !SUCCESS->!NO_MORE_FILES Information=%lu\n", IoStatusBlock->Information);
 #endif
-			g_opts.dirBufCallback(ctx->dirname, ctx->byteLenNtObjDirname, ctx->dirBuffer, FALSE, IoStatusBlock->Status, L"NtQueryDirectoryFile(callback != STATUS_NO_MORE_FILES)");
+			g_opts.dirBufCallback(ctx->dirname, ctx->cbDirname, ctx->dirBuffer, FALSE, IoStatusBlock->Status, L"NtQueryDirectoryFile(callback != STATUS_NO_MORE_FILES)");
 		}
 	}
 	else
 	{
 		if (IoStatusBlock->Information != 0)
 		{
-			g_opts.dirBufCallback(ctx->dirname, ctx->byteLenNtObjDirname, ctx->dirBuffer, TRUE, IoStatusBlock->Status, NULL);
+			g_opts.dirBufCallback(ctx->dirname, ctx->cbDirname, ctx->dirBuffer, TRUE, IoStatusBlock->Status, NULL);
 
 			NTSTATUS ntStat = NtQueryDirectoryFile(
 				ctx->dirHandle
@@ -146,7 +146,7 @@ void NTAPI NtQueryDirectoryApcCallback(_In_ PVOID ApcContext, _In_ PIO_STATUS_BL
 				}
 				else
 				{
-					g_opts.dirBufCallback(ctx->dirname, ctx->byteLenNtObjDirname, ctx->dirBuffer, FALSE, ntStat, L"NtQueryDirectoryFile(callback !NT_STATUS after call to NtQueryDirectoryFile)");
+					g_opts.dirBufCallback(ctx->dirname, ctx->cbDirname, ctx->dirBuffer, FALSE, ntStat, L"NtQueryDirectoryFile(callback !NT_STATUS after call to NtQueryDirectoryFile)");
 				}
 			}
 		}

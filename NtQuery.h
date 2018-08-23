@@ -10,7 +10,7 @@ void WriteNtError(long ntStatus, LPCWSTR NtApinameError, LPCWSTR Functionname);
 BOOL IsDotDir(LPCWSTR cFileName, const DWORD cFilenameLenBytes, const DWORD dwFileAttributes);
 
 //BOOL RunEnumSeq(LPCWSTR dirname, int NtObjDirnameLen);
-BOOL RunEnumApc(LPCWSTR dirname, int NtObjDirnameLen);
+BOOL RunEnumApc(LPCWSTR dirname, int NtObjDirnameLen, BOOL sum);
 
 //typedef void(*pfDirBufferCallback)(FILE_DIRECTORY_INFORMATION* FileInfoBuffer);
 typedef void(*pfDirBufferApc)     (LPCWSTR NtObjDirname, const USHORT byteDirnameLength, const FILE_DIRECTORY_INFORMATION* FileInfoBuffer, const int success, const long ntStatus, const WCHAR* NtApinameError);

@@ -4,6 +4,8 @@
 #include <windows.h>
 #include <shellapi.h>
 
+#include "mem.h"
+
 #include "NtNative.h"
 #include "NtQuery.h"
 

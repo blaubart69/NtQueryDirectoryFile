@@ -1,5 +1,20 @@
 #include "stdafx.h"
 
+typedef struct _opts
+{
+	BOOL sum;
+} OPTS;
+
+typedef struct _stats
+{
+	ULONGLONG files;
+	ULONGLONG dirs;
+	ULONGLONG fileSize;
+} STATS;
+
+STATS g_stats;
+OPTS g_opts;
+
 BOOL isDirectory(const DWORD dwFileAttributes)
 {
 	return (dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
@@ -52,8 +67,18 @@ void OnDirectoryBuffer(LPCWSTR NtObjDirname, const USHORT byteDirnameLength, con
 				{
 					WriteNtError(ntStatus, NtApinameError, L"OnDirectoryBuffer");
 				}
+				g_stats.dirs += 1;
 			}
-			OnEntry(NtObjDirname, byteDirnameLength, dirBuffer);
+			else
+			{
+				g_stats.files += 1;
+				g_stats.fileSize += dirBuffer->EndOfFile;
+			}
+
+			if (!g_opts.sum)
+			{
+				OnEntry(NtObjDirname, byteDirnameLength, dirBuffer);
+			}
 		}
 
 		hasMore = dirBuffer->NextEntryOffset != 0;
@@ -61,12 +86,15 @@ void OnDirectoryBuffer(LPCWSTR NtObjDirname, const USHORT byteDirnameLength, con
 	} while (hasMore);
 }
 
-BOOL RunEnumApc(LPCWSTR dirname, int NtObjDirnameLen)
+BOOL RunEnumApc(LPCWSTR dirname, int NtObjDirnameLen, BOOL sum)
 {
 	long ntstat;
 	WCHAR *NtApinameError;
 
 	myNtEnumApcInit(OnDirectoryBuffer, GetProcessHeap());
+	RtlFillMemory(&g_stats, sizeof(STATS), 0);
+	RtlFillMemory(&g_opts, sizeof(OPTS), 0);
+	g_opts.sum = sum;
 
 	BOOL ok = myNtEnumApcStart(
 		dirname
@@ -98,6 +126,11 @@ BOOL RunEnumApc(LPCWSTR dirname, int NtObjDirnameLen)
 		{
 			break;
 		}
+	}
+
+	if (sum)
+	{
+		writeOut(L"dirs/files/filesize\t%I64u/%I64u/%I64u", g_stats.dirs, g_stats.files, g_stats.fileSize);
 	}
 
 	return ok;

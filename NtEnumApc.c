@@ -36,8 +36,7 @@ typedef  struct _myApcContext
 //
 //
 
-#undef RtlMoveMemory
-__declspec(dllimport) void __stdcall RtlMoveMemory(void *dst, const void *src, size_t len);
+
 
 MyApcContext* AllocContextStruct(LPCWSTR dirname, const USHORT byteLenNtObjDirname, const WCHAR* dirToAppendWithoutZero, const USHORT byteLenDirToAppendWithoutZero)
 {

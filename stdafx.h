@@ -7,3 +7,5 @@
 
 #include "NtNative.h"
 #include "NtQuery.h"
+
+//#define PRINT_DEBUG

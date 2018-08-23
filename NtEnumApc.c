@@ -35,6 +35,10 @@ typedef  struct _myApcContext
 //
 //
 //
+
+#undef RtlMoveMemory
+__declspec(dllimport) void __stdcall RtlMoveMemory(void *dst, const void *src, size_t len);
+
 MyApcContext* AllocContextStruct(LPCWSTR dirname, const USHORT byteLenNtObjDirname, const WCHAR* dirToAppendWithoutZero, const USHORT byteLenDirToAppendWithoutZero)
 {
 	int byteLenFullDir =
@@ -54,7 +58,7 @@ MyApcContext* AllocContextStruct(LPCWSTR dirname, const USHORT byteLenNtObjDirna
 		newCtx->byteLenNtObjDirname = byteLenNtObjDirname;
 
 		WCHAR* w = newCtx->dirname;
-		RtlMoveMemory(w, dirname, byteLenNtObjDirname + sizeof(WCHAR)); // copy with terminating zero
+		MoveMemory(w, dirname, byteLenNtObjDirname + sizeof(WCHAR)); // copy with terminating zero
 
 		if (byteLenDirToAppendWithoutZero > 0)
 		{
@@ -65,7 +69,7 @@ MyApcContext* AllocContextStruct(LPCWSTR dirname, const USHORT byteLenNtObjDirna
 				*w++ = L'\\';
 				newCtx->byteLenNtObjDirname += sizeof(WCHAR);
 			}
-			RtlMoveMemory(w, dirToAppendWithoutZero, byteLenDirToAppendWithoutZero);
+			MoveMemory(w, dirToAppendWithoutZero, byteLenDirToAppendWithoutZero);
 			w							  += byteLenDirToAppendWithoutZero / sizeof(WCHAR);
 			//(char*)w += byteLenDirToAppendWithoutZero;
 			*w = L'\0';
@@ -78,14 +82,14 @@ MyApcContext* AllocContextStruct(LPCWSTR dirname, const USHORT byteLenNtObjDirna
 
 void NTAPI NtQueryDirectoryApcCallback(_In_ PVOID ApcContext, _In_ PIO_STATUS_BLOCK IoStatusBlock, _In_ ULONG Reserved)
 {
-	int i = 0xdeadface;
-
 	MyApcContext *ctx = (MyApcContext*)ApcContext;
 
+#ifdef PRINT_DEBUG
 	writeOut(L"   Apc_CallB: >>> enter - fired/completed/NtStatus/Info %5ld/%5ld/0x%08lX/%8lu | %s\n",
 		g_ApcCounter.Fired, g_ApcCounter.Completed,
 		IoStatusBlock->Status, IoStatusBlock->Information,
 		ctx->dirname);
+#endif
 
 	if (!NT_SUCCESS(IoStatusBlock->Status))
 	{
@@ -93,11 +97,15 @@ void NTAPI NtQueryDirectoryApcCallback(_In_ PVOID ApcContext, _In_ PIO_STATUS_BL
 		{
 			CloseHandle(ctx->dirHandle);
 			HeapFree(g_opts.hProcessHeap, 0, ApcContext);
+#ifdef PRINT_DEBUG
 			writeOut(L"      Apc_CallB: STATUS_NO_MORE_FILES. CloseHandle(dirHandle); HeapFree(0x%lX);\n", ApcContext);
+#endif
 		}
 		else
 		{
+#ifdef PRINT_DEBUG
 			writeOut(L"      Apc_CallB: !SUCCESS->!NO_MORE_FILES Information=%lu\n", IoStatusBlock->Information);
+#endif
 			g_opts.dirBufCallback(ctx->dirname, ctx->byteLenNtObjDirname, ctx->dirBuffer, FALSE, IoStatusBlock->Status, L"NtQueryDirectoryFile(callback != STATUS_NO_MORE_FILES)");
 		}
 	}
@@ -121,8 +129,9 @@ void NTAPI NtQueryDirectoryApcCallback(_In_ PVOID ApcContext, _In_ PIO_STATUS_BL
 				, FALSE				// RestartScan
 			);
 			g_ApcCounter.Fired += 1;
-
+#ifdef PRINT_DEBUG
 			writeOut(L"      Apc_CallB: called NTSTATUS 0x%lX, IoStatus.Information %lu\n", ntStat, ctx->ioBlock.Information);
+#endif
 
 			if (NT_SUCCESS(ntStat))
 			{
@@ -144,10 +153,12 @@ void NTAPI NtQueryDirectoryApcCallback(_In_ PVOID ApcContext, _In_ PIO_STATUS_BL
 	}
 
 	g_ApcCounter.Completed += 1;
+#ifdef PRINT_DEBUG
 	writeOut(L"   Apc_CallB: <<< leave - fired/completed/NtStatus/Info %5ld/%5ld/0x%08lX/%8lu | %s\n",
 		g_ApcCounter.Fired, g_ApcCounter.Completed,
 		IoStatusBlock->Status, IoStatusBlock->Information,
 		ctx->dirname);
+#endif
 }
 
 void writeChars(LPCWSTR chars, const int lenChars)
@@ -182,19 +193,19 @@ int myNtEnumApcStart(
 		*ntstatus = -1;
 		return FALSE;
 	}
-	
-	long x = FIELD_OFFSET(MyApcContext, dirBuffer);
 
+#ifdef PRINT_DEBUG
 	writeOut(L"Apc_Start: parent/bytes: [%s]/%d, dir/bytes: [%s]/%d, new/bytes: [%s]/%d\n",
 		lpDirname, byteDirnameLength, dirToAppendWithoutZero, byteLenDirToAppendWithoutZero,
 		ctx->dirname, ctx->byteLenNtObjDirname);
 
 	writeChars(ctx->dirname, ctx->byteLenNtObjDirname / 2);
+#endif
 	//
 	//
 	//
 	HANDLE dirHandle = CreateFile(
-			lpDirname
+			ctx->dirname
 			, GENERIC_READ
 			, FILE_SHARE_READ
 			, NULL
@@ -230,8 +241,10 @@ int myNtEnumApcStart(
 
 	if (NT_SUCCESS(ntStat))
 	{
+#ifdef PRINT_DEBUG
 		writeOut(L"Apc_Start: NtStatus 0x%lX, Io.Info %lu, addrCtx 0x%lX, byteLenDirToAppend %d, [%s]\n", 
 			ntStat, ctx->ioBlock.Information, ctx, byteLenDirToAppendWithoutZero, ctx->dirname);
+#endif
 	}	
 	else
 	{

@@ -12,8 +12,8 @@ typedef struct _stats
 	ULONGLONG fileSize;
 } STATS;
 
-STATS g_stats;
-OPTS g_opts;
+DECLSPEC_ALIGN(8) static STATS g_stats;
+DECLSPEC_ALIGN(8) static OPTS  g_Opts;
 
 BOOL isDirectory(const DWORD dwFileAttributes)
 {
@@ -75,7 +75,7 @@ void OnDirectoryBuffer(LPCWSTR NtObjDirname, const USHORT byteDirnameLength, con
 				g_stats.fileSize += dirBuffer->EndOfFile;
 			}
 
-			if (!g_opts.sum)
+			if (!g_Opts.sum)
 			{
 				OnEntry(NtObjDirname, byteDirnameLength, dirBuffer);
 			}
@@ -92,9 +92,10 @@ BOOL RunEnumApc(LPCWSTR dirname, int NtObjDirnameLen, BOOL sum)
 	WCHAR *NtApinameError;
 
 	myNtEnumApcInit(OnDirectoryBuffer, GetProcessHeap());
-	RtlFillMemory(&g_stats, sizeof(STATS), 0);
-	RtlFillMemory(&g_opts, sizeof(OPTS), 0);
-	g_opts.sum = sum;
+	//RtlFillMemory(&g_stats, sizeof(STATS), 0);
+	//RtlFillMemory(&g_Opts, sizeof(OPTS), 0);
+	g_stats.dirs = g_stats.files = g_stats.fileSize = 0;
+	g_Opts.sum = sum;
 
 	BOOL ok = myNtEnumApcStart(
 		dirname
@@ -128,10 +129,7 @@ BOOL RunEnumApc(LPCWSTR dirname, int NtObjDirnameLen, BOOL sum)
 		}
 	}
 
-	if (sum)
-	{
-		writeOut(L"dirs/files/filesize\t%I64u/%I64u/%I64u", g_stats.dirs, g_stats.files, g_stats.fileSize);
-	}
+	writeOut(L"dirs/files/filesize\t%I64u/%I64u/%I64u\n", g_stats.dirs, g_stats.files, g_stats.fileSize);
 
 	return ok;
 }

@@ -2,21 +2,15 @@
 
 typedef struct _ApcCounter
 {
-	DECLSPEC_ALIGN(8) long Fired;
-	DECLSPEC_ALIGN(8) long Completed;
+	long Fired;
+	long Completed;
 } ApcCounter;
 
 typedef struct _EnumApcOptions
 {
-	pfDirBufferApc dirBufCallback;
-	HANDLE hProcessHeap;
+	pfDirBufferApc	dirBufCallback;
+	HANDLE			hProcessHeap;
 } EnumApcOptions;
-
-ApcCounter		g_ApcCounter;
-EnumApcOptions	g_opts;
-
-//const SIZE_T dirBufSize = 4096;
-
 //
 // APC context
 //
@@ -33,12 +27,10 @@ typedef  struct _myApcContext
 	WCHAR							dirname[1];
 } MyApcContext;
 //
+DECLSPEC_ALIGN(8) static ApcCounter		g_ApcCounter;
+DECLSPEC_ALIGN(8) static EnumApcOptions	g_ApcOpts;
 //
-//
-
-
-
-MyApcContext* AllocContextStruct(LPCWSTR dirname, const USHORT byteLenNtObjDirname, const WCHAR* dirToAppendWithoutZero, const USHORT byteLenDirToAppendWithoutZero)
+static MyApcContext* AllocContextStruct(LPCWSTR dirname, const USHORT byteLenNtObjDirname, const WCHAR* dirToAppendWithoutZero, const USHORT byteLenDirToAppendWithoutZero)
 {
 	int byteLenFullDir =
 		byteLenNtObjDirname
@@ -50,7 +42,7 @@ MyApcContext* AllocContextStruct(LPCWSTR dirname, const USHORT byteLenNtObjDirna
 	const DWORD DirNameOffset = FIELD_OFFSET(MyApcContext, dirname);
 	const DWORD bytesToAlloc = byteLenFullDir + DirNameOffset;
 
-	MyApcContext* newCtx = (MyApcContext*)HeapAlloc(g_opts.hProcessHeap, 0, bytesToAlloc);
+	MyApcContext* newCtx = (MyApcContext*)HeapAlloc(g_ApcOpts.hProcessHeap, 0, bytesToAlloc);
 	if (newCtx != NULL)
 	{
 		newCtx->ioBlock.Information = 0;
@@ -79,7 +71,7 @@ MyApcContext* AllocContextStruct(LPCWSTR dirname, const USHORT byteLenNtObjDirna
 	return newCtx;
 }
 
-void NTAPI NtQueryDirectoryApcCallback(_In_ PVOID ApcContext, _In_ PIO_STATUS_BLOCK IoStatusBlock, _In_ ULONG Reserved)
+static void NTAPI NtQueryDirectoryApcCallback(_In_ PVOID ApcContext, _In_ PIO_STATUS_BLOCK IoStatusBlock, _In_ ULONG Reserved)
 {
 	MyApcContext *ctx = (MyApcContext*)ApcContext;
 
@@ -95,7 +87,7 @@ void NTAPI NtQueryDirectoryApcCallback(_In_ PVOID ApcContext, _In_ PIO_STATUS_BL
 		if (IoStatusBlock->Status == STATUS_NO_MORE_FILES)
 		{
 			CloseHandle(ctx->dirHandle);
-			HeapFree(g_opts.hProcessHeap, 0, ApcContext);
+			HeapFree(g_ApcOpts.hProcessHeap, 0, ApcContext);
 #ifdef PRINT_DEBUG
 			writeOut(L"      Apc_CallB: STATUS_NO_MORE_FILES. CloseHandle(dirHandle); HeapFree(0x%lX);\n", ApcContext);
 #endif
@@ -105,14 +97,14 @@ void NTAPI NtQueryDirectoryApcCallback(_In_ PVOID ApcContext, _In_ PIO_STATUS_BL
 #ifdef PRINT_DEBUG
 			writeOut(L"      Apc_CallB: !SUCCESS->!NO_MORE_FILES Information=%lu\n", IoStatusBlock->Information);
 #endif
-			g_opts.dirBufCallback(ctx->dirname, ctx->cbDirname, ctx->dirBuffer, FALSE, IoStatusBlock->Status, L"NtQueryDirectoryFile(callback != STATUS_NO_MORE_FILES)");
+			g_ApcOpts.dirBufCallback(ctx->dirname, ctx->cbDirname, ctx->dirBuffer, FALSE, IoStatusBlock->Status, L"NtQueryDirectoryFile(callback != STATUS_NO_MORE_FILES)");
 		}
 	}
 	else
 	{
 		if (IoStatusBlock->Information != 0)
 		{
-			g_opts.dirBufCallback(ctx->dirname, ctx->cbDirname, ctx->dirBuffer, TRUE, IoStatusBlock->Status, NULL);
+			g_ApcOpts.dirBufCallback(ctx->dirname, ctx->cbDirname, ctx->dirBuffer, TRUE, IoStatusBlock->Status, NULL);
 
 			NTSTATUS ntStat = NtQueryDirectoryFile(
 				ctx->dirHandle
@@ -145,7 +137,7 @@ void NTAPI NtQueryDirectoryApcCallback(_In_ PVOID ApcContext, _In_ PIO_STATUS_BL
 				}
 				else
 				{
-					g_opts.dirBufCallback(ctx->dirname, ctx->cbDirname, ctx->dirBuffer, FALSE, ntStat, L"NtQueryDirectoryFile(callback !NT_STATUS after call to NtQueryDirectoryFile)");
+					g_ApcOpts.dirBufCallback(ctx->dirname, ctx->cbDirname, ctx->dirBuffer, FALSE, ntStat, L"NtQueryDirectoryFile(callback !NT_STATUS after call to NtQueryDirectoryFile)");
 				}
 			}
 		}
@@ -160,7 +152,7 @@ void NTAPI NtQueryDirectoryApcCallback(_In_ PVOID ApcContext, _In_ PIO_STATUS_BL
 #endif
 }
 
-void writeChars(LPCWSTR chars, const int lenChars)
+static void writeChars(LPCWSTR chars, const int lenChars)
 {
 	for (int i = 0; i < lenChars; i++)
 	{
@@ -196,9 +188,9 @@ int myNtEnumApcStart(
 #ifdef PRINT_DEBUG
 	writeOut(L"Apc_Start: parent/bytes: [%s]/%d, dir/bytes: [%s]/%d, new/bytes: [%s]/%d\n",
 		lpDirname, byteDirnameLength, dirToAppendWithoutZero, byteLenDirToAppendWithoutZero,
-		ctx->dirname, ctx->byteLenNtObjDirname);
+		ctx->dirname, ctx->cbDirname);
 
-	writeChars(ctx->dirname, ctx->byteLenNtObjDirname / 2);
+	writeChars(ctx->dirname, ctx->cbDirname / 2);
 #endif
 	//
 	//
@@ -247,7 +239,7 @@ int myNtEnumApcStart(
 	}	
 	else
 	{
-		HeapFree(g_opts.hProcessHeap, 0, ctx);
+		HeapFree(g_ApcOpts.hProcessHeap, 0, ctx);
 		*NtApinameError = L"NtQueryDirectoryFile(firstCall)";
 		*ntstatus = ntStat;
 		return FALSE;
@@ -260,8 +252,8 @@ void myNtEnumApcInit(pfDirBufferApc userCallback, HANDLE hProcessHeap)
 {
 	g_ApcCounter.Completed = 0;
 	g_ApcCounter.Fired = 0;
-	g_opts.dirBufCallback = userCallback;
-	g_opts.hProcessHeap = hProcessHeap;
+	g_ApcOpts.dirBufCallback = userCallback;
+	g_ApcOpts.hProcessHeap = hProcessHeap;
 }
 
 void myNtEnumApcReportCounter(long* fired, long* completed)

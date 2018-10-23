@@ -13,6 +13,13 @@ void rawmain(void)
 	}
 	else
 	{
+		if (!TryToSetPrivilege(SE_BACKUP_NAME, TRUE))
+		{
+			writeOut(L"could not set privilege SE_BACKUP_NAME");
+		}
+
+		GetFileInformationByHandleEx()
+
 		WCHAR dirname[1024];
 		int len = wsprintfW(dirname, L"\\\\?\\%s", args[1]);
 		rc = RunEnumApc(dirname, len, TRUE) ? 0 : 8;

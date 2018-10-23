@@ -47,5 +47,8 @@
     <ClCompile Include="stdafx.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="TrySetPrivilege.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

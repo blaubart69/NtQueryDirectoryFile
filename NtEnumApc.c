@@ -14,15 +14,29 @@ typedef struct _EnumApcOptions
 //
 // APC context
 //
+
+typedef struct _dirBuffer
+{
+	DECLSPEC_ALIGN(8)
+		union {
+		FILE_DIRECTORY_INFORMATION	dirBuffer[1];
+		char buf[4096];
+	};
+} DIRBUFFER;
+
 typedef  struct _myApcContext
 {
 	DECLSPEC_ALIGN(8)
+		DIRBUFFER dirBuffer[2];
+	/*
 	union {
 		FILE_DIRECTORY_INFORMATION	dirBuffer[1];
 		char buf[4096];
 	};
+	*/
 	IO_STATUS_BLOCK					ioBlock;
 	HANDLE							dirHandle;
+	USHORT							bufIdx;
 	USHORT							cbDirname;
 	WCHAR							dirname[1];
 } MyApcContext;
@@ -46,6 +60,7 @@ static MyApcContext* AllocContextStruct(LPCWSTR dirname, const USHORT byteLenNtO
 	if (newCtx != NULL)
 	{
 		newCtx->ioBlock.Information = 0;
+		newCtx->bufIdx = 0;
 		newCtx->cbDirname = byteLenNtObjDirname;
 
 		WCHAR* w = newCtx->dirname;
@@ -97,14 +112,15 @@ static void NTAPI NtQueryDirectoryApcCallback(_In_ PVOID ApcContext, _In_ PIO_ST
 #ifdef PRINT_DEBUG
 			writeOut(L"      Apc_CallB: !SUCCESS->!NO_MORE_FILES Information=%lu\n", IoStatusBlock->Information);
 #endif
-			g_ApcOpts.dirBufCallback(ctx->dirname, ctx->cbDirname, ctx->dirBuffer, FALSE, IoStatusBlock->Status, L"NtQueryDirectoryFile(callback != STATUS_NO_MORE_FILES)");
+			g_ApcOpts.dirBufCallback(ctx->dirname, ctx->cbDirname, NULL, FALSE, IoStatusBlock->Status, L"NtQueryDirectoryFile(callback != STATUS_NO_MORE_FILES)");
 		}
 	}
 	else
 	{
 		if (IoStatusBlock->Information != 0)
 		{
-			g_ApcOpts.dirBufCallback(ctx->dirname, ctx->cbDirname, ctx->dirBuffer, TRUE, IoStatusBlock->Status, NULL);
+			USHORT bufIdxToRead = ctx->bufIdx;
+			ctx->bufIdx = ctx->bufIdx == 0 ? 1 : 0;
 
 			NTSTATUS ntStat = NtQueryDirectoryFile(
 				ctx->dirHandle
@@ -112,7 +128,7 @@ static void NTAPI NtQueryDirectoryApcCallback(_In_ PVOID ApcContext, _In_ PIO_ST
 				, NtQueryDirectoryApcCallback		// ApcRoutine
 				, ctx								// ApcContext
 				, &(ctx->ioBlock)
-				, ctx->dirBuffer
+				, &(ctx->dirBuffer[ctx->bufIdx])
 				, 4096
 				, FileDirectoryInformation
 				, FALSE				// ReturnSingleEntry
@@ -120,6 +136,9 @@ static void NTAPI NtQueryDirectoryApcCallback(_In_ PVOID ApcContext, _In_ PIO_ST
 				, FALSE				// RestartScan
 			);
 			g_ApcCounter.Fired += 1;
+
+			g_ApcOpts.dirBufCallback(ctx->dirname, ctx->cbDirname, &(ctx->dirBuffer[bufIdxToRead]), TRUE, IoStatusBlock->Status, NULL);
+
 #ifdef PRINT_DEBUG
 			writeOut(L"      Apc_CallB: called NTSTATUS 0x%lX, IoStatus.Information %lu\n", ntStat, ctx->ioBlock.Information);
 #endif
@@ -137,7 +156,7 @@ static void NTAPI NtQueryDirectoryApcCallback(_In_ PVOID ApcContext, _In_ PIO_ST
 				}
 				else
 				{
-					g_ApcOpts.dirBufCallback(ctx->dirname, ctx->cbDirname, ctx->dirBuffer, FALSE, ntStat, L"NtQueryDirectoryFile(callback !NT_STATUS after call to NtQueryDirectoryFile)");
+					g_ApcOpts.dirBufCallback(ctx->dirname, ctx->cbDirname, NULL, FALSE, ntStat, L"NtQueryDirectoryFile(callback !NT_STATUS after call to NtQueryDirectoryFile)");
 				}
 			}
 		}
